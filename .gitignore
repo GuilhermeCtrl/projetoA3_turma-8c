@@ -33,7 +33,6 @@ build/
 .vscode/
 
 ### app properties ###
-src/main/resources
-src/main/requests.http
+src/main/resources/application.properties
 
 
