@@ -34,5 +34,6 @@ build/
 
 ### app properties ###
 src/main/resources
+src/main/requests.http
 
 
