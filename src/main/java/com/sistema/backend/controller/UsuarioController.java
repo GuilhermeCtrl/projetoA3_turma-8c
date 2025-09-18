@@ -1,16 +1,14 @@
 package com.sistema.backend.controller;
 
-import com.sistema.backend.model.Equipe;
 import com.sistema.backend.model.Usuario;
+import com.sistema.backend.model.Equipe;
 import com.sistema.backend.repository.UsuarioRepository;
 import com.sistema.backend.repository.EquipeRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -22,27 +20,22 @@ public class UsuarioController {
     @Autowired
     private EquipeRepository equipeRepository;
 
-    // Listar todos os usuários
     @GetMapping
     public List<Usuario> listar() {
         return usuarioRepository.findAll();
     }
 
-    // Criar um usuário
     @PostMapping
-    public ResponseEntity<Usuario> criar(@RequestBody Usuario usuario) {
-        // Se a equipe foi informada, verifica se existe
-        if (usuario.getEquipe() != null) {
-            Long equipeId = usuario.getEquipe().getId();
-            Equipe equipe = equipeRepository.findById(equipeId)
-                    .orElseThrow(() -> new RuntimeException("Equipe não encontrada com id: " + equipeId));
-            usuario.setEquipe(equipe);
+    public Usuario criar(@RequestBody Usuario usuario) {
+        if (usuario.getEquipes() != null) {
+            usuario.setEquipes(usuario.getEquipes().stream()
+                    .map(e -> equipeRepository.findById(e.getId())
+                            .orElseThrow(() -> new RuntimeException("Equipe não encontrada: " + e.getId())))
+                    .toList());
         }
-        Usuario salvo = usuarioRepository.save(usuario);
-        return ResponseEntity.ok(salvo);
+        return usuarioRepository.save(usuario);
     }
 
-    // Deletar usuário pelo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         if (!usuarioRepository.existsById(id)) {
@@ -52,53 +45,47 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
-    // Atualizar usuário completamente (PUT)
+
+
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> atualizarUsuario(
-            @PathVariable Long id,
-            @RequestBody Usuario usuarioAtualizado) {
+    public ResponseEntity<Usuario> atualizar(@PathVariable Long id, @RequestBody Usuario usuarioAtualizado) {
+        return usuarioRepository.findById(id).map(usuario -> {
+            usuario.setNome(usuarioAtualizado.getNome());
+            usuario.setCpf(usuarioAtualizado.getCpf());
+            usuario.setEmail(usuarioAtualizado.getEmail());
+            usuario.setCargo(usuarioAtualizado.getCargo());
+            usuario.setLogin(usuarioAtualizado.getLogin());
+            usuario.setSenha(usuarioAtualizado.getSenha());
 
-        return usuarioRepository.findById(id).map(usuarioExistente -> {
-            usuarioExistente.setNome(usuarioAtualizado.getNome());
-            usuarioExistente.setCpf(usuarioAtualizado.getCpf());
-            usuarioExistente.setEmail(usuarioAtualizado.getEmail());
-            usuarioExistente.setCargo(usuarioAtualizado.getCargo());
-            usuarioExistente.setLogin(usuarioAtualizado.getLogin());
-            usuarioExistente.setSenha(usuarioAtualizado.getSenha());
-
-            if (usuarioAtualizado.getEquipe() != null) {
-                Long equipeId = usuarioAtualizado.getEquipe().getId();
-                Equipe equipe = equipeRepository.findById(equipeId)
-                        .orElseThrow(() -> new RuntimeException("Equipe não encontrada com id: " + equipeId));
-                usuarioExistente.setEquipe(equipe);
+            if (usuarioAtualizado.getEquipes() != null) {
+                usuario.setEquipes(usuarioAtualizado.getEquipes().stream()
+                        .map(e -> equipeRepository.findById(e.getId())
+                                .orElseThrow(() -> new RuntimeException("Equipe não encontrada: " + e.getId())))
+                        .toList());
             } else {
-                usuarioExistente.setEquipe(null);
+                usuario.setEquipes(null);
             }
 
-            usuarioRepository.save(usuarioExistente);
-            return ResponseEntity.ok(usuarioExistente);
+            usuarioRepository.save(usuario);
+            return ResponseEntity.ok(usuario);
+        }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+    // PATCH atualizar apenas equipes
+    @PatchMapping("/{id}/equipes")
+    public ResponseEntity<Usuario> atualizarEquipes(@PathVariable Long id, @RequestBody List<Equipe> novasEquipes) {
+        return usuarioRepository.findById(id).map(usuario -> {
+            if (novasEquipes != null) {
+                usuario.setEquipes(novasEquipes.stream()
+                        .map(e -> equipeRepository.findById(e.getId())
+                                .orElseThrow(() -> new RuntimeException("Equipe não encontrada: " + e.getId())))
+                        .toList());
+            } else {
+                usuario.setEquipes(null);
+            }
+            usuarioRepository.save(usuario);
+            return ResponseEntity.ok(usuario);
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Atualizar apenas a equipe de um usuário (PATCH)
-    @PatchMapping("/{id}/equipe")
-    public ResponseEntity<Usuario> atualizarEquipe(@PathVariable Long id, @RequestBody Equipe equipe) {
-        Optional<Usuario> usuarioOptional = usuarioRepository.findById(id);
-        if (!usuarioOptional.isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
 
-        Usuario usuario = usuarioOptional.get();
-
-        if (equipe != null && equipe.getId() != null) {
-            Equipe equipeExistente = equipeRepository.findById(equipe.getId())
-                    .orElseThrow(() -> new RuntimeException("Equipe não encontrada com id: " + equipe.getId()));
-            usuario.setEquipe(equipeExistente);
-        } else {
-            usuario.setEquipe(null);
-        }
-
-        usuarioRepository.save(usuario);
-        return ResponseEntity.ok(usuario);
-    }
 }
