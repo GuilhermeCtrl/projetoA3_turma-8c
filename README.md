@@ -231,5 +231,5 @@ Se precisar zerar o banco:
 DROP DATABASE sistema_poo;
 CREATE DATABASE sistema_poo;
 ```
-Autor
-Projeto desenvolvido por Guilherme Antônio e Amanda Bueno para fins acadêmicos na disciplina de POO.
+* Autores
+  * Projeto desenvolvido por Guilherme Antônio e Amanda Bueno para fins acadêmicos na disciplina de POO.
